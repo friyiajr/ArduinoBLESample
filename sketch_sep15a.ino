@@ -7,11 +7,12 @@ Servo myServo;
 int prevAngle = -1;
 
 const char * deviceServiceUuid = "19b10000-e8f2-537e-4f6c-d104768a1214";
-const char * deviceServiceCharacteristicUuid = "19b10001-e8f2-537e-4f6c-d104768a1215";
-const char * deviceVersionCharacteristicUuid = "19b10001-e8f2-537e-4f6c-d104768a1216";
+const char * deviceServiceRequestCharacteristicUuid = "19b10001-e8f2-537e-4f6c-d104768a1215";
+const char * deviceServiceResponseCharacteristicUuid = "19b10001-e8f2-537e-4f6c-d104768a1216";
 
 BLEService servoService(deviceServiceUuid);
-BLEStringCharacteristic servoCharacteristic(deviceServiceCharacteristicUuid, BLEWrite | BLENotify, 4);
+BLEStringCharacteristic servoRequestCharacteristic(deviceServiceRequestCharacteristicUuid, BLEWrite, 4);
+BLEStringCharacteristic servoResponseCharacteristic(deviceServiceResponseCharacteristicUuid, BLENotify, 4);
 
 void setup() {
   myServo.attach(9);
@@ -26,9 +27,11 @@ void setup() {
   }
 
   BLE.setAdvertisedService(servoService);
-  servoService.addCharacteristic(servoCharacteristic);
+  servoService.addCharacteristic(servoRequestCharacteristic);
+  servoService.addCharacteristic(servoResponseCharacteristic);
   BLE.addService(servoService);
-  servoCharacteristic.writeValue("0");
+  servoResponseCharacteristic.writeValue("0");
+
   BLE.advertise();
 
   Serial.println("Arduino R4 WiFi BLE (Peripheral Device)");
@@ -47,14 +50,14 @@ void loop() {
     Serial.println(" ");
 
     while (central.connected()) {
-      if (servoCharacteristic.written()) {
-        String newAngle = servoCharacteristic.value();
+      if (servoRequestCharacteristic.written()) {
+        String newAngle = servoRequestCharacteristic.value();
         int value = newAngle.toInt();
 
         if (prevAngle != value) {
           myServo.write(value);
           delay(20);
-          servoCharacteristic.writeValue(newAngle);
+          servoResponseCharacteristic.setValue(newAngle);
           Serial.println(value);
           Serial.println();
         }
